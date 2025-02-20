@@ -1,0 +1,198 @@
+     1                                  org 7C00h
+     2                                  begin:
+     3 00000000 E96D00                  	jmp near START
+     4                                  BootSector:
+     5 00000003 6D794F5332303234        	mName		db	'myOS2024'
+     6 0000000B 0000                    	nBytesS		dw	0
+     7 0000000D 00                      	nSectInCl	db	0
+     8 0000000E 0000                    	nRes		dw	0
+     9 00000010 00                      	nFAT		db	0
+    10 00000011 0000                    	nDSC		dw	0
+    11 00000013 0000                    	nSectD		dw	0
+    12 00000015 00                      	dType		db	0
+    13 00000016 0000                    	sectPerFAT	dw	0
+    14 00000018 0000                    	sectPerTr	dw	0
+    15 0000001A 0000                    	nHead		dw	0
+    16 0000001C 00000000                	nHiddenS	dd	0
+    17 00000020 00000000                	nSect32		dd  0
+    18 00000024 00                      	nDisk		db	0
+    19 00000025 00                      	resNT		db  0
+    20 00000026 00                      	extBoot		db	0
+    21 00000027 00000000                	nLog		dd	0
+    22 0000002B 6D794F533230323444-     	dLabel		db	'myOS2024DRV'
+    22 00000034 5256               
+    23 00000036 4641543136000000        	FSname		db	'FAT16',0,0,0
+    24                                  
+    25                                  LBA:
+    26 0000003E 10                      	pSize		db	10h
+    27 0000003F 00                      	reserved	db	0
+    28 00000040 20                      	nSect		db	32
+    29 00000041 00                      	res2		db	0
+    30 00000042 0080                    	offs		dw	8000h
+    31 00000044 0000                    	segm		dw	0
+    32 00000046 0000                    	nBlock1		dw	0
+    33 00000048 0000                    	nBlock2		dw	0
+    34 0000004A 0000                    	nBlock3		dw	0
+    35 0000004C 0000                    	nBlock4		dw	0
+    36                                  	
+    37 0000004E 4D594F533230323453-     	FileName	db	'MYOS2024SYS'
+    37 00000057 5953               
+    38 00000059 00                      	compare		db	0
+    39 0000005A 0000                    	cnt			dw	0
+    40 0000005C 00000000                	firstCl		dd	0
+    41 00000060 4B65726E656C206E6F-     	Err			db	'Kernel not found'
+    41 00000069 7420666F756E64     
+    42                                  	
+    43                                  START:
+    44 00000070 FA                      	cli
+    45 00000071 31C0                    	xor ax,ax
+    46 00000073 8ED8                    	mov ds,ax
+    47 00000075 8EC0                    	mov es,ax
+    48 00000077 8ED0                    	mov ss,ax
+    49 00000079 BC007C                  	mov sp,7C00h
+    50 0000007C FB                      	sti
+    51                                  	
+    52 0000007D 6631C0                  	xor eax,eax
+    53 00000080 A1[1600]                	mov ax,[sectPerFAT]
+    54 00000083 6631DB                  	xor ebx,ebx
+    55 00000086 8A1E[1000]              	mov bl,[nFAT]
+    56 0000008A 66F7E3                  	mul ebx
+    57 0000008D 66A3[4600]              	mov	[nBlock1],eax
+    58 00000091 66A1[1C00]              	mov eax,[nHiddenS]
+    59 00000095 660106[4600]            	add [nBlock1],eax
+    60 0000009A 6631C0                  	xor	eax,eax
+    61 0000009D A1[0E00]                	mov ax,[nRes]
+    62 000000A0 660106[4600]            	add [nBlock1],eax
+    63 000000A5 66A1[4600]              	mov eax,[nBlock1]
+    64 000000A9 66A3[5C00]              	mov [firstCl],eax
+    65                                  	
+    66 000000AD E8E800                  	call readSector
+    67                                  	
+    68 000000B0 B80080                  	mov ax,8000h
+    69 000000B3 89C7                    	mov di,ax
+    70 000000B5 B8[4E00]                	mov ax,FileName
+    71 000000B8 89C6                    	mov si,ax
+    72                                  	
+    73                                  findFile:
+    74 000000BA E8EA00                  	call strcmp
+    75 000000BD 803E[5900]01            	cmp byte[compare],1
+    76 000000C2 741F                    	je LB2
+    77 000000C4 83C720                  	add di,32
+    78 000000C7 FF06[5A00]              	inc word[cnt]
+    79 000000CB 813E[5A00]0002          	cmp word[cnt],512
+    80 000000D1 75E7                    	jne findFile
+    81 000000D3 BD[6000]                	mov bp,Err
+    82 000000D6 B91000                  	mov cx,16
+    83 000000D9 B304                    	mov bl,04h
+    84 000000DB BA0005                  	mov dx,0500h
+    85 000000DE E8E400                  	call Print
+    86 000000E1 EBFE                    	jmp $
+    87                                  	
+    88                                  LB2:
+    89 000000E3 3E8B451A                	mov ax,[ds:di+1Ah]
+    90 000000E7 BB00C0                  	mov bx,0C000h
+    91 000000EA 89DE                    	mov si,bx
+    92 000000EC 268904                  	mov [es:si],ax
+    93                                  	
+    94                                  findNext:
+    95 000000EF 83C602                  	add si,2
+    96 000000F2 E87500                  	call findClusterFAT
+    97 000000F5 C706[4200]0080          	mov word[offs],8000h
+    98 000000FB C606[4000]01            	mov byte[nSect],1
+    99 00000100 E89500                  	call readSector
+   100 00000103 BF0080                  	mov di,8000h
+   101 00000106 89C7                    	mov di,ax
+   102 00000108 3E8B05                  	mov ax,[ds:di]
+   103 0000010B 268904                  	mov [es:si],ax
+   104 0000010E 83F8FF                  	cmp ax,0FFFFh
+   105 00000111 75DC                    	jne findNext
+   106                                  	
+   107 00000113 BE00C0                  	mov si,0C000h
+   108 00000116 C706[4400]0010          	mov word[segm],1000h
+   109 0000011C C706[4200]0000          	mov word[offs],0		;1000:0000
+   110                                  	
+   111                                  loadNext:
+   112 00000122 268B04                  	mov ax,[es:si]
+   113 00000125 E81E00                  	call loadCluster
+   114 00000128 6631DB                  	xor ebx,ebx
+   115 0000012B 8A1E[0D00]              	mov bl,[nSectInCl]
+   116 0000012F 66C1E309                	shl ebx,9
+   117 00000133 66011E[4200]            	add [offs],ebx
+   118 00000138 83C602                  	add si,2
+   119 0000013B 26833CFF                	cmp word[es:si],0FFFFh
+   120 0000013F 75E1                    	jne loadNext
+   121                                  	
+   122 00000141 EA00000010              	jmp word 1000h:0000h
+   123                                  
+   124                                  loadCluster:
+   125 00000146 60                      	pusha
+   126 00000147 668B1E[5C00]            	mov ebx,[firstCl]
+   127 0000014C 66891E[4600]            	mov [nBlock1],ebx
+   128 00000151 31DB                    	xor bx,bx
+   129 00000153 8A1E[0D00]              	mov bl,[nSectInCl]
+   130 00000157 F7E3                    	mul bx
+   131 00000159 0106[4600]              	add [nBlock1],ax
+   132 0000015D 1116[4800]              	adc [nBlock2],dx
+   133 00000161 881E[4000]              	mov [nSect],bl
+   134 00000165 E83000                  	call readSector
+   135 00000168 61                      	popa
+   136 00000169 C3                      	ret
+   137                                  	
+   138                                  findClusterFAT:	;Вход:ax-номер кластера; Выход: ax-номер записи в найденом секторе
+   139 0000016A 6631DB                  	xor ebx,ebx
+   140 0000016D 89C3                    	mov bx,ax
+   141 0000016F C1EB08                  	shr bx,8
+   142 00000172 66891E[4600]            	mov [nBlock1],ebx
+   143 00000177 6631C9                  	xor ecx,ecx
+   144 0000017A 668B0E[1C00]            	mov ecx,[nHiddenS]
+   145 0000017F 66010E[4600]            	add [nBlock1],ecx
+   146 00000184 6631C9                  	xor ecx,ecx
+   147 00000187 8B0E[0E00]              	mov cx,[nRes]
+   148 0000018B 66010E[4600]            	add [nBlock1],ecx
+   149 00000190 C1E308                  	shl	bx,8
+   150 00000193 29D8                    	sub ax,bx
+   151 00000195 D1E0                    	shl ax,1
+   152 00000197 C3                      	ret
+   153                                  	
+   154                                  	
+   155                                  	
+   156                                  	
+   157                                  readSector:
+   158 00000198 60                      	pusha
+   159 00000199 B280                    	mov dl,80h
+   160 0000019B B8[3E00]                	mov ax,LBA
+   161 0000019E 89C6                    	mov si,ax
+   162 000001A0 B80042                  	mov ax,4200h
+   163 000001A3 CD13                    	int 13h
+   164 000001A5 61                      	popa
+   165 000001A6 C3                      	ret
+   166                                  
+   167                                  strcmp: ;es:si  ds:di
+   168 000001A7 56                      	push si
+   169 000001A8 57                      	push di
+   170 000001A9 C606[5900]01            	mov byte[compare],1
+   171 000001AE B90B00                  	mov cx,11
+   172                                  LP1:
+   173 000001B1 268A04                  	mov al,[es:si]
+   174 000001B4 3E3A05                  	cmp al,[ds:di]
+   175 000001B7 7405                    	je L1
+   176 000001B9 C606[5900]00            	mov byte[compare],0
+   177                                  L1:	
+   178 000001BE 46                      	inc si
+   179 000001BF 47                      	inc di
+   180 000001C0 E2EF                    	loop LP1
+   181 000001C2 5F                      	pop di
+   182 000001C3 5E                      	pop si
+   183 000001C4 C3                      	ret
+   184                                  
+   185                                  Print:
+   186 000001C5 31C0                    	xor ax,ax
+   187 000001C7 8EC0                    	mov es,ax
+   188                                  	;mov bl,04h
+   189 000001C9 B80113                  	mov ax,1301h
+   190 000001CC B700                    	mov bh, 0
+   191 000001CE CD10                    	int 10h
+   192 000001D0 C3                      	ret	
+   193                                  	
+   194 000001D1 00<rep 2Dh>             times 510 -$+begin db 0
+   195 000001FE 55AA                    db 55h,0AAh

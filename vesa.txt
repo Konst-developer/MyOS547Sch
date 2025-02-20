@@ -1,0 +1,82 @@
+     1                                  ;org 100h
+     2 00000000 FA                      	cli
+     3 00000001 B80010                  	mov ax,1000h
+     4 00000004 8EC0                    	mov es,ax
+     5 00000006 8ED8                    	mov ds,ax
+     6 00000008 8ED0                    	mov ss,ax
+     7 0000000A BCFFFF                  	mov sp,0ffffh
+     8 0000000D FB                      	sti
+     9                                  	
+    10 0000000E B8024F                  	mov ax,4f02h
+    11 00000011 BB4401                  	mov bx,324
+    12 00000014 CD10                    	int 10h
+    13 00000016 C606[7300]32            	mov byte[BB],50
+    14                                  	
+    15 0000001B C706[7100]0000          	mov word[YY],0
+    16                                  forY:	
+    17 00000021 C706[6F00]0000          	mov word[XX],0
+    18 00000027 6631C0                  	xor eax,eax
+    19 0000002A A1[7100]                	mov ax,[YY]
+    20 0000002D 6689C3                  	mov ebx,eax
+    21 00000030 C1E802                  	shr ax,2
+    22 00000033 C1EB04                  	shr	bx,4
+    23 00000036 01D8                    	add	ax,bx
+    24 00000038 A2[7400]                	mov byte[GG],al
+    25                                  	
+    26                                  forX:
+    27 0000003B 6631C0                  	xor eax,eax
+    28 0000003E A1[6F00]                	mov ax,[XX]
+    29 00000041 C1E802                  	shr ax,2
+    30 00000044 A2[7500]                	mov [RR],al
+    31 00000047 E82F00                  	call putPixel
+    32 0000004A FF06[6F00]              	inc word[XX]
+    33 0000004E 813E[6F00]0004          	cmp word[XX],1024
+    34 00000054 75E5                    	jne forX
+    35                                  	
+    36 00000056 FF06[7100]              	inc word[YY]
+    37 0000005A 813E[7100]0003          	cmp word[YY],768
+    38 00000060 75BF                    	jne forY
+    39                                  	
+    40                                  	
+    41 00000062 31C0                    	xor ax,ax
+    42 00000064 CD16                    	int 16h
+    43 00000066 B80200                  	mov ax,0002h
+    44 00000069 CD10                    	int 10h
+    45                                  	;mov ax,4ch
+    46                                  	;int 21h
+    47                                  	
+    48 0000006B 00000000                mem		dd	0
+    49 0000006F 0000                    XX		dw	0
+    50 00000071 0000                    YY		dw	0
+    51 00000073 00                      BB		db	0
+    52 00000074 00                      GG		db	0
+    53 00000075 00                      RR		db	0
+    54 00000076 00                      NN		db	0
+    55 00000077 0000                    bank	dw	0
+    56                                  
+    57                                  putPixel:
+    58 00000079 6631DB                  	xor ebx,ebx
+    59 0000007C 8B1E[7100]              	mov bx,[YY]
+    60 00000080 66C1E30C                	shl ebx,12
+    61                                  	
+    62 00000084 6631C0                  	xor eax,eax
+    63 00000087 A1[6F00]                	mov ax,[XX]
+    64 0000008A 66C1E002                	shl eax,2
+    65 0000008E 6601D8                  	add eax,ebx
+    66 00000091 66A3[6B00]              	mov [mem],eax
+    67                                  	
+    68 00000095 A1[6D00]                	mov ax,[mem+2]
+    69 00000098 3B06[7700]              	cmp ax,[bank]
+    70 0000009C 740E                    	je lp1
+    71 0000009E A3[7700]                	mov [bank],ax
+    72 000000A1 B8054F                  	mov ax,4f05h
+    73 000000A4 31DB                    	xor bx,bx
+    74 000000A6 8B16[6D00]              	mov dx,[mem+2]
+    75 000000AA CD10                    	int 10h
+    76                                  lp1:
+    77 000000AC B800A0                  	mov ax,0a000h
+    78 000000AF 8EC0                    	mov es,ax
+    79 000000B1 8B3E[6B00]              	mov di,[mem]
+    80 000000B5 66A1[7300]              	mov eax,[BB]
+    81 000000B9 26668905                	mov [es:di],eax
+    82 000000BD C3                      	ret

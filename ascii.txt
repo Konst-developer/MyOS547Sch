@@ -1,0 +1,15 @@
+     1                                  org 100h
+     2 00000000 B800B0                  	mov ax,0b000h
+     3 00000003 8EC0                    	mov es,ax
+     4 00000005 BE0080                  	mov si,8000h
+     5 00000008 81C6A000                	add si,160
+     6 0000000C B90000                  	mov cx,0
+     7                                  LP0:
+     8 0000000F 26880C                  	mov byte [es:si],cl
+     9 00000012 26884C01                	mov byte [es:si+1],cl
+    10 00000016 83C602                  	add si,2
+    11 00000019 41                      	inc cx
+    12 0000001A 81F90001                	cmp cx,100h
+    13 0000001E 75EF                    	jne LP0
+    14 00000020 B84C00                  	mov ax, 4ch
+    15 00000023 CD21                    	int 21h

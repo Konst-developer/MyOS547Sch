@@ -1,0 +1,88 @@
+     1                                  use16
+     2                                  KERNEL_SEG		EQU	1000h
+     3                                  
+     4                                  START:
+     5 00000000 FA                      	cli
+     6 00000001 B80010                  	mov ax,KERNEL_SEG
+     7 00000004 8EC0                    	mov	es,ax
+     8 00000006 8ED8                    	mov ds,ax
+     9 00000008 8ED0                    	mov ss,ax
+    10 0000000A BC[A302]                	mov sp,STACK
+    11 0000000D FB                      	sti
+    12                                  	
+    13 0000000E BE8400                  	mov si,84h
+    14 00000011 06                      	push es
+    15 00000012 31C0                    	xor ax,ax
+    16 00000014 8EC0                    	mov es,ax
+    17 00000016 B8[3200]                	mov ax,INT21
+    18 00000019 268904                  	mov [es:si],ax
+    19 0000001C 26C744020010            	mov word[es:si+2],KERNEL_SEG
+    20 00000022 07                      	pop es
+    21                                  	
+    22 00000023 B80100                  	mov ax,1
+    23 00000026 CD21                    	int 21h
+    24 00000028 BB0005                  	mov bx,0500h
+    25 0000002B B80200                  	mov ax,2
+    26 0000002E CD21                    	int 21h
+    27                                  	
+    28 00000030 EBFE                    	jmp $
+    29                                  	
+    30                                  INT21:	
+    31 00000032 53                      	push bx
+    32 00000033 FA                      	cli
+    33 00000034 8CCB                    	mov bx,cs
+    34 00000036 8EC3                    	mov	es,bx
+    35 00000038 8EDB                    	mov ds,bx
+    36 0000003A 8ED3                    	mov ss,bx
+    37                                  	;mov sp,STACK
+    38 0000003C FB                      	sti
+    39                                  	
+    40 0000003D B303                    	mov bl,3
+    41 0000003F F6E3                    	mul bl
+    42 00000041 BB[4900]                	mov bx,SWITCH
+    43 00000044 01D8                    	add ax,bx
+    44 00000046 5B                      	pop bx
+    45 00000047 FFE0                    	jmp ax
+    46                                  	
+    47                                  SWITCH:
+    48 00000049 E90600                  	jmp near FUNC00
+    49 0000004C E91900                  	jmp near FUNC01
+    50 0000004F E92100                  	jmp near FUNC02
+    51                                  	
+    52                                  FUNC00:
+    53 00000052 BB0100                  	mov bx,0001h
+    54 00000055 31C0                    	xor ax,ax
+    55 00000057 CF                      	iret
+    56                                  
+    57 00000058 4D794F532032303234-     OSName db 'MyOS 2024 v0.01',0
+    57 00000061 2076302E303100     
+    58                                  FUNC01:;возвращает в es:si адрес строки с названием ОС
+    59 00000068 BE[5800]                	mov si,OSName
+    60 0000006B B80010                  	mov ax,KERNEL_SEG
+    61 0000006E 8EC0                    	mov es,ax
+    62 00000070 31C0                    	xor ax,ax
+    63 00000072 CF                      	iret
+    64                                  FUNC02:	;выводит на экран строку с адреса es:si, bl-X-координата, bh-Y 
+    65 00000073 B800B0                  	mov ax, 0b000h
+    66 00000076 8ED8                    	mov ds,ax
+    67 00000078 88F8                    	mov al,bh
+    68 0000007A B1A0                    	mov cl,160
+    69 0000007C F6E1                    	mul cl
+    70 0000007E 81E3FF00                	and bx,00ffh
+    71 00000082 D1E3                    	shl bx,1
+    72 00000084 01D8                    	add ax,bx
+    73 00000086 BF0080                  	mov di,8000h
+    74 00000089 01C7                    	add di,ax
+    75                                  FN02_1:	
+    76 0000008B 268A04                  	mov al,[es:si]
+    77 0000008E 3E8805                  	mov [ds:di],al
+    78 00000091 3EC645010F              	mov byte[ds:di+1],0Fh
+    79 00000096 46                      	inc si
+    80 00000097 83C702                  	add di,2
+    81 0000009A 26803C00                	cmp byte[es:si],0
+    82 0000009E 75EB                    	jne FN02_1
+    83 000000A0 31C0                    	xor ax,ax
+    84 000000A2 CF                      	iret
+    85                                  	
+    86 000000A3 00<rep 200h>            times 512 db 0
+    87                                  STACK:
