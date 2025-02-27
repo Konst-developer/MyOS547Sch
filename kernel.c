@@ -139,7 +139,7 @@ static void _start()
 
     FileDescriptorRecord fd;
     fd.clusterNLow=0;
-    char fn2[]="IO.SYS";
+    char fn2[]="MSDOS.SYS";
     fd=getFileInDirDSC(fd,fn2);
     int nn=fd.clusterNLow;
     println(uintToStr(s,nn));
@@ -602,7 +602,7 @@ static int strcmp(char *s1, char *s2)
     int cmp=0;
     if(strlen(s1) && strlen(s2))
     {
-        int i;
+        int i=0;
         while(s1[i] && s2[i])
         {
             if(s1[i]>s2[i])
