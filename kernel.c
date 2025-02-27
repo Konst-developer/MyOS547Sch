@@ -137,28 +137,40 @@ static void _start()
     print("Number of sectors in Cluster: ");
     println(uintToStr(s,FSInfo[0].sectorsPerCluster));
 
-    readRootDir(0,BUFFER_ADDRESS);
-    FileDescriptorRecord *fd = (FileDescriptorRecord *)BUFFER_ADDRESS;
-    char fn[13];
-    for(int i=0;i<10;i++)
-    {
-        int n=0;
-        for(int j=0;j<8;j++)
-            if(fd[i].fileName[j]!=32)
-            {
-                fn[n]=fd[i].fileName[j];
-                n++;
-            }
-        fn[n++]='.';
-        for(int j=8;j<11;j++)
-            if(fd[i].fileName[j]!=32)
-            {
-                fn[n]=fd[i].fileName[j];
-                n++;
-            }
-        fn[n]=0;
-        println(fn);
+    FileDescriptorRecord fd;
+    fd.clusterNLow=0;
+    char fn2[]="IO.SYS";
+    fd=getFileInDirDSC(fd,fn2);
+    int nn=fd.clusterNLow;
+    println(uintToStr(s,nn));
+    readCluster(0,nn,BUFFER_ADDRESS);
+    for(int i=0;i<512;i++){
+        videoMem[3000+i*2]=allMem[BUFFER_ADDRESS+i];
+        videoMem[3000+i*2+1]=0x0A;
     }
+
+    // readRootDir(0,BUFFER_ADDRESS);
+    // FileDescriptorRecord *fd = (FileDescriptorRecord *)BUFFER_ADDRESS;
+    // char fn[13];
+    // for(int i=0;i<10;i++)
+    // {
+    //     int n=0;
+    //     for(int j=0;j<8;j++)
+    //         if(fd[i].fileName[j]!=32)
+    //         {
+    //             fn[n]=fd[i].fileName[j];
+    //             n++;
+    //         }
+    //     fn[n++]='.';
+    //     for(int j=8;j<11;j++)
+    //         if(fd[i].fileName[j]!=32)
+    //         {
+    //             fn[n]=fd[i].fileName[j];
+    //             n++;
+    //         }
+    //     fn[n]=0;
+    //     println(fn);
+    // }
     
     //readCluster(0,2,BUFFER_ADDRESS);
     // for(int i=0;i<960;i++){
@@ -646,9 +658,18 @@ static FileDescriptorRecord getFileInDirDSC(FileDescriptorRecord dir,char *fn)
         fd=(FileDescriptorRecord *)dirAddress;
         uint32_t nn=0;
         while(fd[nn].fileName[0]){
+            print(fileNameDSCToStr(fn2,fd[nn].fileName));
+            print(":");
+            char s[13];
+            print(uintToStr(s,strcmp(fileNameDSCToStr(fn2,fd[nn].fileName),fn)));
+            print("; ");
+            
             if(strcmp(fileNameDSCToStr(fn2,fd[nn].fileName),fn)==0)
             {
                 fdr=fd[nn];
+                
+                
+                //fdr.clusterNLow=fd[nn].clusterNLow;
                 return fdr;
             }
             nn++;
