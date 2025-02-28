@@ -9,6 +9,7 @@ const uint32_t BUFFER_ADDRESS=0x200000;
 const uint32_t FS_DATA_ADDRESS=0x100100;//+1024
 const uint32_t MEMORY_BITMAP=0x100500; 
 const uint32_t FAT_ADDRESS=0x120500;
+const uint32_t OPEN_FILES_DESCRIPTORS=0x140500;
 const uint32_t FREE_MEM_BEGINS=0x400000;
 
 //global variables
@@ -79,6 +80,21 @@ typedef struct
 } FileDescriptorRecord;
 #pragma pack(pop)
 
+typedef struct
+{
+    uint32_t presence;
+    char fileName[16];
+    uint16_t startCluster;
+    uint16_t curCluster;
+    uint32_t filePtr;
+    uint32_t fileSize;
+    uint32_t bufAddress;
+    uint32_t attr;
+    uint16_t dirCluster;
+    uint16_t reserved;
+} FILE;
+
+
 
 //Headers
 static void print(char * c);
@@ -110,7 +126,7 @@ static int strcmp(char *s1, char *s2);
 static int isCorrectSymbol(char s);
 static char *fileNameDSCToStr(char *stdStr,char *dscStr);
 static FileDescriptorRecord getFileInDirDSC(FileDescriptorRecord dir,char *fn);
-
+static FileDescriptorRecord getFileDSCByPath(char *fn);
 //0
 static void _start()
 {
@@ -143,11 +159,16 @@ static void _start()
     fd=getFileInDirDSC(fd,fn2);
     int nn=fd.clusterNLow;
     println(uintToStr(s,nn));
-    readCluster(0,nn,BUFFER_ADDRESS);
-    for(int i=0;i<512;i++){
-        videoMem[3000+i*2]=allMem[BUFFER_ADDRESS+i];
-        videoMem[3000+i*2+1]=0x0A;
-    }
+
+    char fn[]="/TEST/001/EGA.CPI";
+    fd=getFileDSCByPath(fn);
+    println(fileNameDSCToStr(fn2,fd.fileName));
+
+    // readCluster(0,nn,BUFFER_ADDRESS);
+    // for(int i=0;i<512;i++){
+    //     videoMem[3000+i*2]=allMem[BUFFER_ADDRESS+i];
+    //     videoMem[3000+i*2+1]=0x0A;
+    // }
 
     // readRootDir(0,BUFFER_ADDRESS);
     // FileDescriptorRecord *fd = (FileDescriptorRecord *)BUFFER_ADDRESS;
@@ -657,13 +678,7 @@ static FileDescriptorRecord getFileInDirDSC(FileDescriptorRecord dir,char *fn)
         readRootDir(0,dirAddress);
         fd=(FileDescriptorRecord *)dirAddress;
         uint32_t nn=0;
-        while(fd[nn].fileName[0]){
-            print(fileNameDSCToStr(fn2,fd[nn].fileName));
-            print(":");
-            char s[13];
-            print(uintToStr(s,strcmp(fileNameDSCToStr(fn2,fd[nn].fileName),fn)));
-            print("; ");
-            
+        while(fd[nn].fileName[0]){         
             if(strcmp(fileNameDSCToStr(fn2,fd[nn].fileName),fn)==0)
             {
                 fdr=fd[nn];
@@ -747,4 +762,38 @@ static int isCorrectSymbol(char s)
         i++;
     }
     return isCorrect;
+}
+
+//31
+static FileDescriptorRecord getFileDSCByPath(char *fn)
+{
+    FileDescriptorRecord fdr;
+    fdr.clusterNLow=0;
+    fdr.fileName[0]=0;
+    uint32_t fnLen=strlen(fn);
+    uint32_t n=1, m=0;
+    char curFn[13];
+    if(fn[0]=='/')
+    {
+        while(1)
+        {
+            if(fn[n]!='/' && n<fnLen)
+            {
+                curFn[m]=fn[n];
+                n++;
+                m++;
+            }
+            else{
+                curFn[m];
+                m=0;
+                n++;
+                fdr=getFileInDirDSC(fdr,curFn);
+                if(fdr.fileName[0]==0)
+                    return fdr;
+                if(n>=fnLen)
+                    break;
+            }
+        }
+    }
+    return fdr;
 }
